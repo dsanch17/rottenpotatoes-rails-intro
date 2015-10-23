@@ -12,22 +12,36 @@ class MoviesController < ApplicationController
 
   def index
     
+    #Get the list of all ratings and the ratings checked to display
+    @all_ratings = Movie.AllRatings
+    
     if params[:ratings].nil?
       @ratings = Movie.AllRatings
     else
       @ratings = params[:ratings].keys
     end
     
-    if params[:sort] == "title"
-      @movies = Movie.order("title")
-    elsif params[:sort] == "release_date"
-      @movies = Movie.order("release_date")
-    else
-      @movies = Movie.where('rating IN (?)', @ratings)
+    #assign via short circuit logic
+    @ratings_from_user = params[:ratings] || session[:ratings] || {}
+    if @ratings_from_user == {}
+      @ratings_from_user = Hash[@all_ratings.map { |rating| [rating, rating]}]
     end
     
-    @all_ratings = Movie.AllRatings
+    if params[:sort] != session[:sort] or params[:ratings] != session[:ratings]
+      session[:sort] = params[:sort] || session[:sort]
+      session[:ratings] = @ratings_from_user
     
+     flash.keep
+      redirect_to :sort => params[:sort] || session[:sort], :ratings => @ratings_from_user
+    end
+    
+    if params[:sort].present?
+      @movies = Movie.by_rating_order(@ratings, params[:sort] || session[:sort])
+    else 
+      @movies = Movie.by_rating_order(@ratings, nil)
+    end
+    
+
     
   end
 
